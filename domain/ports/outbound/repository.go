@@ -10,14 +10,14 @@ import (
 // Repository defines the outbound port for entity persistence
 type Repository interface {
 	// Save persists an entity
-	Save(ctx context.Context, entity *entities.Entity) error
+	Save(ctx context.Context, entity *entities.Example) error
 
 	// FindByID retrieves an entity by ID
-	FindByID(ctx context.Context, id string) (*entities.Entity, error)
+	FindByID(ctx context.Context, id string) (*entities.Example, error)
 
 	// Delete removes an entity
 	Delete(ctx context.Context, id string) error
 
 	// List returns all entities with pagination
-	List(ctx context.Context, pagination valueobjects.Pagination) ([]*entities.Entity, error)
+	List(ctx context.Context, pagination valueobjects.Pagination) ([]*entities.Example, error)
 }

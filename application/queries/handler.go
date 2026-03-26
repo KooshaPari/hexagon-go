@@ -24,7 +24,7 @@ type GetByIDQuery struct {
 }
 
 // Handle executes the get by ID query
-func (h *QueryHandler) HandleGetByID(ctx context.Context, query GetByIDQuery) (*entities.Entity, error) {
+func (h *QueryHandler) HandleGetByID(ctx context.Context, query GetByIDQuery) (*entities.Example, error) {
 	return h.repo.FindByID(ctx, query.ID)
 }
 
@@ -35,13 +35,21 @@ type ListQuery struct {
 }
 
 // Handle executes the list query
-func (h *QueryHandler) HandleList(ctx context.Context, query ListQuery) ([]*entities.Entity, error) {
-	pagination := valueobjects.Pagination{
-		Page:     query.Page,
-		PageSize: query.PageSize,
+func (h *QueryHandler) HandleList(ctx context.Context, query ListQuery) ([]*entities.Example, error) {
+	page := query.Page
+	pageSize := query.PageSize
+	if page == 0 {
+		page = 1
 	}
-	if pagination.Page == 0 {
-		pagination = valueobjects.DefaultPagination()
+	if pageSize == 0 {
+		pageSize = 20
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	pagination := valueobjects.Pagination{
+		Page:     page,
+		PageSize: pageSize,
 	}
 	return h.repo.List(ctx, pagination)
 }

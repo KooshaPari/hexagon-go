@@ -25,24 +25,27 @@ func NewPostgresRepository(db *sql.DB) *PostgresRepository {
 var _ outbound.Repository = (*PostgresRepository)(nil)
 
 // Save persists an entity to PostgreSQL
-func (r *PostgresRepository) Save(ctx context.Context, entity *entities.Entity) error {
+func (r *PostgresRepository) Save(ctx context.Context, entity *entities.Example) error {
 	query := `
-		INSERT INTO entities (id, created_at, updated_at)
-		VALUES ($1, $2, $3)
+		INSERT INTO entities (id, created_at, updated_at, name, description, active)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (id) DO UPDATE SET
-			updated_at = EXCLUDED.updated_at
+			updated_at = EXCLUDED.updated_at,
+			name = EXCLUDED.name,
+			description = EXCLUDED.description,
+			active = EXCLUDED.active
 	`
-	_, err := r.db.ExecContext(ctx, query, entity.ID, entity.CreatedAt, entity.UpdatedAt)
+	_, err := r.db.ExecContext(ctx, query, entity.ID, entity.CreatedAt, entity.UpdatedAt, entity.Name, entity.Description, entity.Active)
 	return err
 }
 
 // FindByID retrieves an entity by ID
-func (r *PostgresRepository) FindByID(ctx context.Context, id string) (*entities.Entity, error) {
-	query := `SELECT id, created_at, updated_at FROM entities WHERE id = $1`
+func (r *PostgresRepository) FindByID(ctx context.Context, id string) (*entities.Example, error) {
+	query := `SELECT id, created_at, updated_at, name, description, active FROM entities WHERE id = $1`
 	row := r.db.QueryRowContext(ctx, query, id)
 
-	var entity entities.Entity
-	err := row.Scan(&entity.ID, &entity.CreatedAt, &entity.UpdatedAt)
+	var entity entities.Example
+	err := row.Scan(&entity.ID, &entity.CreatedAt, &entity.UpdatedAt, &entity.Name, &entity.Description, &entity.Active)
 	if err == sql.ErrNoRows {
 		return nil, errors.ErrNotFound
 	}
@@ -70,9 +73,9 @@ func (r *PostgresRepository) Delete(ctx context.Context, id string) error {
 }
 
 // List returns all entities with pagination
-func (r *PostgresRepository) List(ctx context.Context, pagination valueobjects.Pagination) ([]*entities.Entity, error) {
+func (r *PostgresRepository) List(ctx context.Context, pagination valueobjects.Pagination) ([]*entities.Example, error) {
 	query := `
-		SELECT id, created_at, updated_at
+		SELECT id, created_at, updated_at, name, description, active
 		FROM entities
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
@@ -83,15 +86,15 @@ func (r *PostgresRepository) List(ctx context.Context, pagination valueobjects.P
 	}
 	defer rows.Close()
 
-	var entities []*entities.Entity
+	var result []*entities.Example
 	for rows.Next() {
-		var entity entities.Entity
-		if err := rows.Scan(&entity.ID, &entity.CreatedAt, &entity.UpdatedAt); err != nil {
+		var entity entities.Example
+		if err := rows.Scan(&entity.ID, &entity.CreatedAt, &entity.UpdatedAt, &entity.Name, &entity.Description, &entity.Active); err != nil {
 			return nil, err
 		}
-		entities = append(entities, &entity)
+		result = append(result, &entity)
 	}
-	return entities, rows.Err()
+	return result, rows.Err()
 }
 
 // InitSchema creates the database schema
