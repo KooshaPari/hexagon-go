@@ -73,7 +73,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, id string) error {
 }
 
 // List returns all entities with pagination
-func (r *PostgresRepository) List(ctx context.Context, pagination valueobjects.Pagination) ([]*entities.Example, error) {
+func (r *PostgresRepository) List(ctx context.Context, pagination valueobjects.Pagination) (result []*entities.Example, err error) {
 	query := `
 		SELECT id, created_at, updated_at, name, description, active
 		FROM entities
@@ -84,9 +84,13 @@ func (r *PostgresRepository) List(ctx context.Context, pagination valueobjects.P
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("failed to close rows: %w", closeErr)
+		}
+	}()
 
-	var result []*entities.Example
+	result = make([]*entities.Example, 0)
 	for rows.Next() {
 		var entity entities.Example
 		if err := rows.Scan(&entity.ID, &entity.CreatedAt, &entity.UpdatedAt, &entity.Name, &entity.Description, &entity.Active); err != nil {
@@ -94,7 +98,10 @@ func (r *PostgresRepository) List(ctx context.Context, pagination valueobjects.P
 		}
 		result = append(result, &entity)
 	}
-	return result, rows.Err()
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // InitSchema creates the database schema
